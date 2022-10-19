@@ -44,7 +44,7 @@ public record MatchListViewResponse(
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
 	LocalDateTime createdAt
 ) {
-	public MatchListViewResponse(QueryMatchListResponse response, String localName) {
+	public MatchListViewResponse(QueryMatchListResponse response) {
 		this(response.id(),
 			response.title(),
 			response.category(),
@@ -53,7 +53,7 @@ public record MatchListViewResponse(
 			response.authorId(),
 			response.authorNickname(),
 			response.distance(),
-			localName,
+			response.localName(),
 			response.matchDate(),
 			response.createdAt());
 	}

@@ -37,6 +37,9 @@ public record QueryMatchListResponse(
 	@Schema(description = "작성자 경도")
 	Double longitude,
 
+	@Schema(description = "작성자 위치")
+	String localName,
+
 	@Schema(description = "나와의 거리")
 	Double distance,
 

@@ -21,6 +21,11 @@ public class UserSettings {
 		this.searchDistance = searchDistance;
 	}
 
+	public UserSettings(Double latitude, Double longitude, String localName, Integer searchDistance) {
+		this.location = new Location(latitude, longitude, localName);
+		this.searchDistance = searchDistance;
+	}
+
 	public Location getLocation() {
 		return this.location;
 	}

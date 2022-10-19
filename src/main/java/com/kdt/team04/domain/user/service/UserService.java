@@ -28,6 +28,7 @@ import com.kdt.team04.domain.user.dto.response.UserFindResponse;
 import com.kdt.team04.domain.user.dto.response.UserResponse;
 import com.kdt.team04.domain.user.entity.User;
 import com.kdt.team04.domain.user.repository.UserRepository;
+import com.kdt.team04.feign.kakao.dto.CoordToAddressResponse;
 import com.kdt.team04.feign.kakao.service.KakaoApiService;
 
 @Service
@@ -42,7 +43,8 @@ public class UserService {
 	private final KakaoApiService kakaoApiService;
 
 	public UserService(UserRepository userRepository, MatchReviewGiverService matchReviewGiver,
-		TeamGiverService teamGiver, S3Uploader s3Uploader, UserConverter userConverter, KakaoApiService kakaoApiService) {
+		TeamGiverService teamGiver, S3Uploader s3Uploader, UserConverter userConverter,
+		KakaoApiService kakaoApiService) {
 		this.userRepository = userRepository;
 		this.matchReviewGiver = matchReviewGiver;
 		this.teamGiver = teamGiver;
@@ -136,7 +138,10 @@ public class UserService {
 		User foundUser = this.userRepository.findById(targetId)
 			.orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND,
 				MessageFormat.format("UserId = {0}", targetId)));
-		foundUser.updateSettings(request.latitude(), request.longitude(), request.searchDistance());
+		CoordToAddressResponse coordToAddressResponse = kakaoApiService.coordToAddressResponse(request.longitude(),
+			request.latitude());
+		String localName = coordToAddressResponse.documents().get(0).address().region3DepthName();
+		foundUser.updateSettings(request.latitude(), request.longitude(), localName, request.searchDistance());
 
 		return new UpdateUserSettingsResponse(request.latitude(), request.longitude(), request.searchDistance());
 	}
