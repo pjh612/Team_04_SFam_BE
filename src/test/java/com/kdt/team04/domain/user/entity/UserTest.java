@@ -27,7 +27,7 @@ class UserTest {
 		Integer searchDistance = 25;
 
 		//when
-		user.updateSettings(latitude, longitude, searchDistance);
+		user.updateSettings(latitude, longitude, "테스트동",searchDistance);
 
 		//then
 		Assertions.assertThat(user.getUserSettings().getLocation().getLatitude()).isEqualTo(latitude);
@@ -52,7 +52,7 @@ class UserTest {
 		Integer searchDistance = 25;
 
 		//when, then
-		Assertions.assertThatThrownBy(() -> user.updateSettings(null, null, searchDistance))
+		Assertions.assertThatThrownBy(() -> user.updateSettings(null, null,"테스트동", searchDistance))
 			.isInstanceOf(IllegalArgumentException.class);
 	}
 
@@ -74,7 +74,7 @@ class UserTest {
 		Double longitude = 120.0;
 
 		//when, then
-		Assertions.assertThatThrownBy(() -> user.updateSettings(latitude, longitude, null))
+		Assertions.assertThatThrownBy(() -> user.updateSettings(latitude, longitude, "테스트동",null))
 			.isInstanceOf(IllegalArgumentException.class);
 	}
 }

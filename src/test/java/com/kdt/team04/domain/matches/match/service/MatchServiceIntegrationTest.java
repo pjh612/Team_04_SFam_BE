@@ -74,7 +74,7 @@ class MatchServiceIntegrationTest {
 		entityManager.persist(leader);
 		entityManager.persist(user1);
 		entityManager.persist(user2);
-		leader.updateSettings(1.1, 1.2, 10);
+		leader.updateSettings(1.1, 1.2, "테스트동",10);
 		Team team = Team.builder()
 			.name("team1")
 			.description("first team")
@@ -102,7 +102,7 @@ class MatchServiceIntegrationTest {
 		//given
 		User user = new User("test1234", "nickname", "$2a$12$JB1zYmj1TfoylCds8Tt5ue//BQTWE2xO5HZn.MjZcpo.z.7LKagZ.");
 		entityManager.persist(user);
-		user.updateSettings(1.1, 1.2, 10);
+		user.updateSettings(1.1, 1.2, "테스트동",10);
 		CreateMatchRequest request = new CreateMatchRequest("match1", LocalDate.now(),
 			MatchType.INDIVIDUAL_MATCH,
 			null, 1, SportsCategory.BADMINTON, "content");
