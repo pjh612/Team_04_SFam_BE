@@ -7,4 +7,5 @@ public interface TokenService {
 	TokenResponse findByUserId(Long userId);
 
 	String save(Long userId, String refreshToken, Long expirySeconds);
+	void delete(Long userId);
 }

@@ -10,5 +10,4 @@ public record JwtAuthentication(String token, Long id, String username, String e
 		checkArgument(id != null, "id must be provided");
 		checkArgument(isNotBlank(username), "username must be provided");
 	}
-
 }

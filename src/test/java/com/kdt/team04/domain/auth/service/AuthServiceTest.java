@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.kdt.team04.common.exception.BusinessException;
 import com.kdt.team04.common.exception.EntityNotFoundException;
 import com.kdt.team04.common.security.jwt.Jwt;
-import com.kdt.team04.common.security.jwt.JwtConfig;
+import com.kdt.team04.domain.auth.dto.JwtToken;
 import com.kdt.team04.domain.auth.dto.request.SignUpRequest;
 import com.kdt.team04.domain.auth.dto.response.SignInResponse;
 import com.kdt.team04.domain.auth.dto.response.SignUpResponse;
@@ -44,9 +44,6 @@ class AuthServiceTest {
 
 	@Mock
 	UserService userService;
-
-	@Mock
-	TokenService tokenService;
 
 	@Mock
 	Jwt jwt;
@@ -72,19 +69,16 @@ class AuthServiceTest {
 
 		List<GrantedAuthority> authorities = new ArrayList<>(
 			Collections.singleton(new SimpleGrantedAuthority("USER")));
-		Jwt.Claims claims = Jwt.Claims.builder()
-			.userId(userResponse.id())
-			.roles(new String[] {String.valueOf(Role.USER)})
-			.username(userResponse.username())
-			.build();
+		Jwt.Claims claims = Jwt.Claims.builder(userResponse.id(), userResponse.username(),
+			new String[] {String.valueOf(Role.USER)}).build();
+		JwtToken accessToken = new JwtToken("accessToken", "accessToken", 60);
+		JwtToken refreshToken = new JwtToken("refreshToken", "refreshToken", 120);
 		given(passwordEncoder.matches(password, encodedPassword)).willReturn(true);
 		given(userService.findByUsername(userResponse.username())).willReturn(userResponse);
-		given(jwt.generateAccessToken(any(Jwt.Claims.class))).willReturn("accessToken");
+		given(jwt.generateAccessToken(any(Jwt.Claims.class))).willReturn(accessToken);
 		given(jwt.verify("accessToken")).willReturn(claims);
-		given(jwt.generateRefreshToken()).willReturn("refreshToken");
+		given(jwt.generateRefreshToken(userResponse.id())).willReturn(refreshToken);
 		given(jwt.getAuthorities(any(Jwt.Claims.class))).willReturn(authorities);
-		given(jwt.accessTokenProperties()).willReturn(new JwtConfig.TokenProperties("accessToken", 60));
-		given(jwt.refreshTokenProperties()).willReturn(new JwtConfig.TokenProperties("refreshToken", 120));
 
 		//when
 		SignInResponse signInResponse = authService.signIn(userResponse.username(), password);
@@ -94,10 +88,7 @@ class AuthServiceTest {
 		verify(userService, times(1)).findByUsername(userResponse.username());
 		verify(jwt, times(1)).verify("accessToken");
 		verify(jwt, times(1)).generateAccessToken(any(Jwt.Claims.class));
-		verify(jwt, times(1)).generateRefreshToken();
-		verify(jwt, times(2)).accessTokenProperties();
-		verify(jwt, times(2)).refreshTokenProperties();
-		verify(tokenService, times(1)).save(userResponse.id(), "refreshToken", (long)jwt.getExpirySeconds());
+		verify(jwt, times(1)).generateRefreshToken(userResponse.id());
 
 		assertThat(signInResponse.id()).isEqualTo(userResponse.id());
 		assertThat(signInResponse.username()).isEqualTo(userResponse.username());

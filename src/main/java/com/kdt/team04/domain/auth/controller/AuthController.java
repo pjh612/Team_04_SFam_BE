@@ -19,13 +19,13 @@ import com.kdt.team04.common.ApiResponse;
 import com.kdt.team04.common.config.resolver.AuthUser;
 import com.kdt.team04.common.security.CookieConfigProperties;
 import com.kdt.team04.common.security.jwt.JwtAuthentication;
+import com.kdt.team04.common.security.jwt.JwtConfigProperties;
 import com.kdt.team04.domain.auth.dto.JwtToken;
 import com.kdt.team04.domain.auth.dto.request.SignInRequest;
 import com.kdt.team04.domain.auth.dto.request.SignUpRequest;
 import com.kdt.team04.domain.auth.dto.response.SignInResponse;
 import com.kdt.team04.domain.auth.dto.response.SignUpResponse;
 import com.kdt.team04.domain.auth.service.AuthService;
-import com.kdt.team04.domain.auth.dto.SignOutResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,10 +37,12 @@ public class AuthController {
 
 	private final AuthService authService;
 	private final CookieConfigProperties cookieConfigProperties;
+	private final JwtConfigProperties jwtConfigProperties;
 
-	public AuthController(AuthService authService, CookieConfigProperties cookieConfigProperties) {
+	public AuthController(AuthService authService, CookieConfigProperties cookieConfigProperties, JwtConfigProperties jwtConfigProperties) {
 		this.authService = authService;
 		this.cookieConfigProperties = cookieConfigProperties;
+		this.jwtConfigProperties = jwtConfigProperties;
 	}
 
 	@Operation(summary = "로그인", description = "로그인을 통해 토큰을 획득합니다.")
@@ -87,15 +89,15 @@ public class AuthController {
 	@Operation(summary = "로그아웃")
 	@DeleteMapping("/signout")
 	public ApiResponse<String> signOut(@AuthUser JwtAuthentication auth, HttpServletResponse response) {
-		SignOutResponse signOutResponse = authService.signOut();
-		ResponseCookie accessTokenCookie = ResponseCookie.from(signOutResponse.accessTokenHeader(), "")
+		authService.signOut(auth.id());
+		ResponseCookie accessTokenCookie = ResponseCookie.from(jwtConfigProperties.accessToken().header(), "")
 			.path("/")
 			.maxAge(0)
 			.httpOnly(true)
 			.secure(cookieConfigProperties.secure())
 			.domain(cookieConfigProperties.domain())
 			.build();
-		ResponseCookie refreshTokenCookie = ResponseCookie.from(signOutResponse.refreshTokenHeader(), "")
+		ResponseCookie refreshTokenCookie = ResponseCookie.from(jwtConfigProperties.refreshToken().header(), "")
 			.path("/")
 			.maxAge(0)
 			.httpOnly(true)

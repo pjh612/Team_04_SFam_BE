@@ -13,7 +13,6 @@ import com.kdt.team04.common.security.jwt.Jwt;
 import com.kdt.team04.common.security.jwt.JwtAuthentication;
 import com.kdt.team04.common.security.jwt.JwtAuthenticationToken;
 import com.kdt.team04.domain.auth.dto.JwtToken;
-import com.kdt.team04.domain.auth.dto.SignOutResponse;
 import com.kdt.team04.domain.auth.dto.request.SignUpRequest;
 import com.kdt.team04.domain.auth.dto.response.SignInResponse;
 import com.kdt.team04.domain.auth.dto.response.SignUpResponse;
@@ -27,14 +26,11 @@ import com.kdt.team04.domain.user.service.UserService;
 public class AuthService {
 
 	private final UserService userService;
-	private final TokenService tokenService;
 	private final PasswordEncoder passwordEncoder;
 	private final Jwt jwt;
 
-	public AuthService(UserService userService, TokenService tokenService, PasswordEncoder passwordEncoder,
-		Jwt jwt) {
+	public AuthService(UserService userService, PasswordEncoder passwordEncoder, Jwt jwt) {
 		this.userService = userService;
-		this.tokenService = tokenService;
 		this.passwordEncoder = passwordEncoder;
 		this.jwt = jwt;
 	}
@@ -53,23 +49,23 @@ public class AuthService {
 				MessageFormat.format("Password = {0}", password));
 		}
 
-		Jwt.Claims claims = Jwt.Claims.builder()
-			.userId(foundUser.id())
-			.roles(new String[] {String.valueOf(Role.USER)})
-			.username(foundUser.username())
+		Jwt.Claims claims = Jwt.Claims.builder(foundUser.id(), username, new String[] {String.valueOf(Role.USER)})
 			.build();
-		String accessToken = jwt.generateAccessToken(claims);
-		String refreshToken = jwt.generateRefreshToken();
-		int expirySeconds = jwt.getExpirySeconds();
-		JwtAuthentication authentication = new JwtAuthentication(accessToken, foundUser.id(), foundUser.username(),
-			foundUser.email());
+		JwtToken accessToken = jwt.generateAccessToken(claims);
+		JwtToken refreshToken = jwt.generateRefreshToken(foundUser.id());
+		JwtAuthentication authentication = new JwtAuthentication(
+			accessToken.token(),
+			foundUser.id(),
+			foundUser.username(),
+			foundUser.email()
+		);
 		JwtAuthenticationToken authenticationToken = new JwtAuthenticationToken(authentication, null,
-			jwt.getAuthorities(jwt.verify(accessToken)));
-		tokenService.save(foundUser.id(), refreshToken, (long)expirySeconds);
+			jwt.getAuthorities(jwt.verify(accessToken.token())));
 
 		UserSettings foundUserSettings = foundUser.userSettings() == null
 			? new UserSettings(null, null, null)
 			: foundUser.userSettings();
+
 		return new SignInResponse(
 			foundUser.id(),
 			username,
@@ -80,10 +76,8 @@ public class AuthService {
 			foundUserSettings.getLocation().getLatitude(),
 			foundUserSettings.getLocation().getLongitude(),
 			foundUserSettings.getSearchDistance(),
-			new JwtToken(jwt.accessTokenProperties().header(), accessToken,
-				jwt.accessTokenProperties().expirySeconds()),
-			new JwtToken(jwt.refreshTokenProperties().header(), refreshToken,
-				jwt.refreshTokenProperties().expirySeconds()),
+			accessToken,
+			refreshToken,
 			authenticationToken
 		);
 	}
@@ -103,10 +97,7 @@ public class AuthService {
 		return new SignUpResponse(userId);
 	}
 
-	public SignOutResponse signOut() {
-		return new SignOutResponse(
-			jwt.accessTokenProperties().header(),
-			jwt.refreshTokenProperties().header()
-		);
+	public void signOut(Long userId) {
+		jwt.invalidateRefreshToken(userId);
 	}
 }

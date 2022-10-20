@@ -26,32 +26,39 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.kdt.team04.common.config.CorsConfigProperties;
 import com.kdt.team04.common.security.jwt.Jwt;
 import com.kdt.team04.common.security.jwt.JwtAuthenticationFilter;
-import com.kdt.team04.common.security.jwt.JwtConfig;
-import com.kdt.team04.domain.auth.service.TokenService;
+import com.kdt.team04.common.security.jwt.JwtConfigProperties;
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties({JwtConfig.class, SecurityConfigProperties.class, CookieConfigProperties.class, CorsConfigProperties.class})
+@EnableConfigurationProperties({
+	JwtConfigProperties.class,
+	SecurityConfigProperties.class,
+	CookieConfigProperties.class,
+	CorsConfigProperties.class}
+)
 public class WebSecurityConfig {
 
 	private final Jwt jwt;
 	private final SecurityConfigProperties securityConfigProperties;
 	private final Optional<OAuth2LoginConfigurer<HttpSecurity>> oAuth2LoginConfigurer;
 	private final CookieConfigProperties cookieConfigProperties;
+	private final JwtConfigProperties jwtConfigProperties;
 	private final CorsConfigProperties corsConfigProperties;
 
 	public WebSecurityConfig(Jwt jwt, SecurityConfigProperties securityConfigProperties,
 		Optional<OAuth2LoginConfigurer<HttpSecurity>> oAuth2LoginConfigurer,
-		CookieConfigProperties cookieConfigProperties, CorsConfigProperties corsConfigProperties) {
+		CookieConfigProperties cookieConfigProperties,
+		JwtConfigProperties jwtConfigProperties, CorsConfigProperties corsConfigProperties) {
 		this.jwt = jwt;
 		this.securityConfigProperties = securityConfigProperties;
 		this.oAuth2LoginConfigurer = oAuth2LoginConfigurer;
 		this.cookieConfigProperties = cookieConfigProperties;
+		this.jwtConfigProperties = jwtConfigProperties;
 		this.corsConfigProperties = corsConfigProperties;
 	}
 
-	public JwtAuthenticationFilter jwtAuthenticationFilter(Jwt jwt, TokenService tokenService) {
-		return new JwtAuthenticationFilter(jwt, tokenService, cookieConfigProperties);
+	public JwtAuthenticationFilter jwtAuthenticationFilter(Jwt jwt) {
+		return new JwtAuthenticationFilter(jwt, jwtConfigProperties, cookieConfigProperties);
 	}
 
 	@Bean
@@ -84,7 +91,7 @@ public class WebSecurityConfig {
 	}
 
 	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http, TokenService tokenService) throws Exception {
+	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
 			.authorizeRequests()
 			.requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
@@ -115,7 +122,7 @@ public class WebSecurityConfig {
 			.exceptionHandling()
 			.authenticationEntryPoint(authenticationEntryPoint())
 			.and()
-			.addFilterBefore(jwtAuthenticationFilter(jwt, tokenService), UsernamePasswordAuthenticationFilter.class)
+			.addFilterBefore(jwtAuthenticationFilter(jwt), UsernamePasswordAuthenticationFilter.class)
 			.cors()
 		;
 

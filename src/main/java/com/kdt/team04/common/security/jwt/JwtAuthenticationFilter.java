@@ -20,7 +20,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.kdt.team04.common.exception.EntityNotFoundException;
@@ -28,28 +27,28 @@ import com.kdt.team04.common.security.CookieConfigProperties;
 import com.kdt.team04.common.security.jwt.exception.JwtAccessTokenNotFoundException;
 import com.kdt.team04.common.security.jwt.exception.JwtRefreshTokenNotFoundException;
 import com.kdt.team04.common.security.jwt.exception.JwtTokenNotFoundException;
-import com.kdt.team04.domain.auth.service.TokenService;
+import com.kdt.team04.domain.auth.dto.JwtToken;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private final Jwt jwt;
+	private final JwtConfigProperties jwtConfigProperties;
 	private final CookieConfigProperties cookieConfigProperties;
-	private final TokenService tokenService;
 	private final Logger log = LoggerFactory.getLogger(getClass());
 
-	public JwtAuthenticationFilter(Jwt jwt, TokenService tokenService, CookieConfigProperties cookieConfigProperties) {
+	public JwtAuthenticationFilter(Jwt jwt, JwtConfigProperties jwtConfigProperties,
+		CookieConfigProperties cookieConfigProperties) {
 		this.jwt = jwt;
-		this.tokenService = tokenService;
+		this.jwtConfigProperties = jwtConfigProperties;
 		this.cookieConfigProperties = cookieConfigProperties;
 	}
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
 		FilterChain filterChain) throws ServletException, IOException {
-
 		logRequest(request);
 
 		try {
-			authenticate(getAccessToken(request), request, response);
+			authenticate(getAccessTokenCookie(request).getValue(), request, response);
 		} catch (JwtTokenNotFoundException e) {
 			log.warn(e.getMessage());
 		}
@@ -65,20 +64,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		);
 	}
 
-	private String getAccessToken(HttpServletRequest request) {
-		if (request.getCookies() == null) {
-			throw new JwtAccessTokenNotFoundException("AccessToken is not found.");
-		}
-		return Arrays.stream(request.getCookies())
-			.filter(cookie -> cookie.getName().equals(jwt.accessTokenProperties().header()))
-			.findFirst()
-			.map(Cookie::getValue)
-			.orElseThrow(() -> new JwtAccessTokenNotFoundException("AccessToken is not found"));
-	}
-
 	private void authenticate(String accessToken, HttpServletRequest request, HttpServletResponse response) {
 		try {
-			Jwt.Claims claims = verify(accessToken);
+			Jwt.Claims claims = jwt.verify(accessToken);
 			JwtAuthenticationToken authentication = createAuthenticationToken(claims, request, accessToken);
 			SecurityContextHolder.getContext().setAuthentication(authentication);
 		} catch (TokenExpiredException exception) {
@@ -92,35 +80,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private JwtAuthenticationToken createAuthenticationToken(Jwt.Claims claims, HttpServletRequest request,
 		String accessToken) {
 		List<GrantedAuthority> authorities = jwt.getAuthorities(claims);
-		if (claims.userId != null && !authorities.isEmpty()) {
-			JwtAuthentication authentication = new JwtAuthentication(accessToken, claims.userId, claims.username,
-				claims.email);
-			JwtAuthenticationToken authenticationToken = new JwtAuthenticationToken(authentication, null, authorities);
-			authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+		JwtAuthentication authentication = new JwtAuthentication(accessToken, claims.getUserId(), claims.getUsername(),
+			claims.getEmail());
+		JwtAuthenticationToken authenticationToken = new JwtAuthenticationToken(authentication, null, authorities);
+		authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-			return authenticationToken;
-		} else {
-			throw new JWTDecodeException("Decode Error");
-		}
+		return authenticationToken;
 	}
 
 	private void refreshAuthentication(String accessToken, HttpServletRequest request, HttpServletResponse response) {
 		try {
-			String refreshToken = getRefreshToken(request);
-			verifyRefreshToken(accessToken, refreshToken);
-			String reIssuedAccessToken = accessTokenReIssue(accessToken);
-			Jwt.Claims reIssuedClaims = verify(reIssuedAccessToken);
+			Cookie refreshTokenCookie = getRefreshTokenCookie(request);
+			jwt.verifyRefreshToken(accessToken, refreshTokenCookie.getValue());
+			JwtToken reissuedAccessToken = jwt.reIssueAccessToken(accessToken);
+			Jwt.Claims reIssuedClaims = jwt.decode(reissuedAccessToken.token());
 			JwtAuthenticationToken authentication = createAuthenticationToken(reIssuedClaims, request,
-				reIssuedAccessToken);
+				reissuedAccessToken.token());
 			SecurityContextHolder.getContext().setAuthentication(authentication);
-			ResponseCookie cookie = ResponseCookie.from(jwt.accessTokenProperties().header(),
-					reIssuedAccessToken)
+			ResponseCookie cookie = ResponseCookie.from(reissuedAccessToken.header(), reissuedAccessToken.token())
 				.path("/")
 				.httpOnly(true)
 				.sameSite(cookieConfigProperties.sameSite().attributeValue())
 				.domain(cookieConfigProperties.domain())
 				.secure(cookieConfigProperties.secure())
-				.maxAge(jwt.refreshTokenProperties().expirySeconds())
+				.maxAge(refreshTokenCookie.getMaxAge())
 				.build();
 			response.addHeader(SET_COOKIE, cookie.toString());
 
@@ -129,33 +112,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		}
 	}
 
-	private String getRefreshToken(HttpServletRequest request) {
+	public Cookie getAccessTokenCookie(HttpServletRequest request) {
+		if (request.getCookies() == null) {
+			throw new JwtAccessTokenNotFoundException("AccessToken is not found.");
+		}
+		return Arrays.stream(request.getCookies())
+			.filter(cookie -> cookie.getName().equals(jwtConfigProperties.accessToken().header()))
+			.findFirst()
+			.orElseThrow(() -> new JwtAccessTokenNotFoundException("AccessToken is not found"));
+	}
+
+	public Cookie getRefreshTokenCookie(HttpServletRequest request) {
 		if (request.getCookies() != null) {
 			return Arrays.stream(request.getCookies())
-				.filter(cookie -> cookie.getName().equals(jwt.refreshTokenProperties().header()))
+				.filter(cookie -> cookie.getName().equals(jwtConfigProperties.refreshToken().header()))
 				.findFirst()
-				.map(Cookie::getValue)
 				.orElseThrow(() -> new JwtRefreshTokenNotFoundException("RefreshToken is not found."));
 		} else {
 			throw new JwtRefreshTokenNotFoundException();
 		}
-	}
-
-	private void verifyRefreshToken(String accessToken, String refreshToken) {
-		jwt.verify(refreshToken);
-		Long userId = jwt.decode(accessToken).userId;
-		TokenResponse token = tokenService.findByUserId(userId);
-
-		if (!userId.equals(token.userId())) {
-			throw new JWTVerificationException("Invalid refresh token.");
-		}
-	}
-
-	private String accessTokenReIssue(String accessToken) {
-		return jwt.generateAccessToken(jwt.decode(accessToken));
-	}
-
-	private Jwt.Claims verify(String token) {
-		return jwt.verify(token);
 	}
 }

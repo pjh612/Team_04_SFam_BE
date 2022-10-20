@@ -46,4 +46,10 @@ public class RedisTokenService implements TokenService {
 		redisService.setDataWithExpiration(String.valueOf(userId), refreshToken, expirySeconds);
 		return refreshToken;
 	}
+
+	@Override
+	@Transactional
+	public void delete(Long userId) {
+		redisService.deleteData(String.valueOf(userId));
+	}
 }

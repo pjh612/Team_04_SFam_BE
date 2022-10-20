@@ -1,5 +1,8 @@
 package com.kdt.team04.common.security.jwt;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.logging.log4j.util.Strings.isNotBlank;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -14,54 +17,87 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTCreator;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
-
-import lombok.Builder;
+import com.kdt.team04.domain.auth.dto.JwtToken;
+import com.kdt.team04.domain.auth.service.TokenService;
 
 @Component
 public class Jwt {
-	private final JwtConfig jwtConfigure;
+	private final JwtConfigProperties jwtConfigProperties;
+	private final TokenService tokenService;
 	private final Algorithm algorithm;
 	private final JWTVerifier jwtVerifier;
 
-	public Jwt(JwtConfig jwtConfigure) {
-		this.jwtConfigure = jwtConfigure;
-		this.algorithm = Algorithm.HMAC512(jwtConfigure.clientSecret());
+	public Jwt(JwtConfigProperties jwtConfigProperties, TokenService tokenService) {
+		this.jwtConfigProperties = jwtConfigProperties;
+		this.algorithm = Algorithm.HMAC512(jwtConfigProperties.clientSecret());
+		this.tokenService = tokenService;
 		this.jwtVerifier = JWT.require(algorithm)
-			.withIssuer(this.jwtConfigure.issuer())
+			.withIssuer(this.jwtConfigProperties.issuer())
 			.build();
 	}
 
-	public String generateAccessToken(Claims claims) {
+	public JwtToken reIssueAccessToken(String accessToken) {
+		JwtToken jwtToken = generateAccessToken(decode(accessToken));
+		jwtVerifier.verify(jwtToken.token());
+
+		return jwtToken;
+	}
+
+	public JwtToken generateAccessToken(Claims claims) {
 		Date now = new Date();
 		JWTCreator.Builder builder = JWT.create();
 
 		builder.withSubject(claims.userId.toString());
-		builder.withIssuer(jwtConfigure.issuer());
+		builder.withIssuer(jwtConfigProperties.issuer());
 		builder.withIssuedAt(now);
 
-		if (jwtConfigure.accessToken().expirySeconds() > 0) {
-			builder.withExpiresAt(new Date(now.getTime() + jwtConfigure.accessToken().expirySeconds() * 1000L));
+		if (jwtConfigProperties.accessToken().expirySeconds() > 0) {
+			builder.withExpiresAt(new Date(now.getTime() + jwtConfigProperties.accessToken().expirySeconds() * 1000L));
 		}
 		builder.withClaim("userId", claims.userId);
 		builder.withClaim("username", claims.username);
 		builder.withClaim("email", claims.email);
 		builder.withArrayClaim("roles", claims.roles);
 
-		return builder.sign(this.algorithm);
+		return new JwtToken(
+			jwtConfigProperties.accessToken().header(),
+			builder.sign(algorithm),
+			jwtConfigProperties.accessToken().expirySeconds());
 	}
 
-	public String generateRefreshToken() {
+	public JwtToken generateRefreshToken(Long userId) {
 		Date now = new Date();
 		JWTCreator.Builder builder = JWT.create();
-		builder.withIssuer(this.jwtConfigure.issuer());
+		builder.withIssuer(jwtConfigProperties.issuer());
 		builder.withIssuedAt(now);
-		if (this.jwtConfigure.refreshToken().expirySeconds() > 0) {
-			builder.withExpiresAt(new Date(now.getTime() + jwtConfigure.refreshToken().expirySeconds() * 1000L));
+		if (jwtConfigProperties.refreshToken().expirySeconds() > 0) {
+			builder.withExpiresAt(new Date(now.getTime() + jwtConfigProperties.refreshToken().expirySeconds() * 1000L));
 		}
 
-		return builder.sign(this.algorithm);
+		String refreshToken = builder.sign(algorithm);
+
+		tokenService.save(userId, refreshToken, (long)jwtConfigProperties.refreshToken().expirySeconds());
+
+		return new JwtToken(
+			jwtConfigProperties.refreshToken().header(),
+			refreshToken,
+			jwtConfigProperties.refreshToken().expirySeconds());
+	}
+
+	public void verifyRefreshToken(String accessToken, String refreshToken) {
+		verify(refreshToken);
+		Long userId = decode(accessToken).getUserId();
+		TokenResponse token = tokenService.findByUserId(userId);
+		if (!refreshToken.equals(token.token())) {
+			throw new JWTVerificationException("Invalid refresh token.");
+		}
+	}
+
+	public void invalidateRefreshToken(Long userId) {
+		tokenService.delete(userId);
 	}
 
 	public Claims decode(String token) {
@@ -70,7 +106,7 @@ public class Jwt {
 	}
 
 	public Claims verify(String token) {
-		return new Claims(this.jwtVerifier.verify(token));
+		return new Claims(jwtVerifier.verify(token));
 
 	}
 
@@ -84,25 +120,11 @@ public class Jwt {
 			.collect(Collectors.toList());
 	}
 
-	public JwtConfig.TokenProperties accessTokenProperties() {
-		return this.jwtConfigure.accessToken();
-	}
-
-	public JwtConfig.TokenProperties refreshTokenProperties() {
-		return this.jwtConfigure.refreshToken();
-	}
-
-	public int getExpirySeconds() {
-		return this.jwtConfigure.refreshToken().expirySeconds();
-	}
-
 	public static class Claims {
-		Long userId;
-		String username;
-		String email;
-		String[] roles;
-		Date iat;
-		Date exp;
+		private Long userId;
+		private String username;
+		private String email;
+		private String[] roles;
 
 		private Claims() {
 		}

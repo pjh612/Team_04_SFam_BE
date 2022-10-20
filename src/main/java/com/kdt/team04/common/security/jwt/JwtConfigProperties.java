@@ -5,24 +5,12 @@ import org.springframework.boot.context.properties.ConstructorBinding;
 
 @ConstructorBinding
 @ConfigurationProperties(prefix = "jwt")
-public record JwtConfig(
+public record JwtConfigProperties(
 	TokenProperties accessToken,
 	TokenProperties refreshToken,
 	String issuer,
 	String clientSecret
 ) {
-	public JwtConfig(
-		TokenProperties accessToken,
-		TokenProperties refreshToken,
-		String issuer,
-		String clientSecret
-	) {
-		this.accessToken = accessToken;
-		this.refreshToken = refreshToken;
-		this.issuer = issuer;
-		this.clientSecret = clientSecret;
-	}
-
 	public record TokenProperties(String header, int expirySeconds) {
 	}
 }
