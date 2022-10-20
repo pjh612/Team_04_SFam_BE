@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import com.kdt.team04.common.security.CookieConfigProperties;
 import com.kdt.team04.common.security.jwt.Jwt;
+import com.kdt.team04.domain.auth.dto.JwtToken;
 import com.kdt.team04.domain.user.Role;
 
 @Component
@@ -28,20 +29,20 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
 		Authentication authentication) {
 		CustomOAuth2User oAuth2User = (CustomOAuth2User)authentication.getPrincipal();
-		Jwt.Claims claims = Jwt.Claims.builder()
-			.userId(oAuth2User.userId())
-			.roles(new String[] {String.valueOf(Role.USER)})
-			.username(oAuth2User.username())
+		Jwt.Claims claims = Jwt.Claims.builder(
+				oAuth2User.userId(),
+				oAuth2User.username(),
+				new String[] {String.valueOf(Role.USER)})
 			.email(oAuth2User.email())
 			.build();
 
-		String accessToken = jwt.generateAccessToken(claims);
-		String refreshToken = jwt.generateRefreshToken();
+		JwtToken accessToken = jwt.generateAccessToken(claims);
+		JwtToken refreshToken = jwt.generateRefreshToken(oAuth2User.userId());
 
-		ResponseCookie accessTokenCookie = createCookie(jwt.accessTokenProperties().header(), accessToken,
-			jwt.refreshTokenProperties().expirySeconds());
-		ResponseCookie refreshTokenCookie = createCookie(jwt.refreshTokenProperties().header(), refreshToken,
-			jwt.refreshTokenProperties().expirySeconds());
+		ResponseCookie accessTokenCookie = createCookie(accessToken.header(), accessToken.token(),
+			refreshToken.expirySeconds());
+		ResponseCookie refreshTokenCookie = createCookie(refreshToken.header(), refreshToken.token(),
+			refreshToken.expirySeconds());
 
 		response.setHeader(SET_COOKIE, accessTokenCookie.toString());
 		response.addHeader(SET_COOKIE, refreshTokenCookie.toString());

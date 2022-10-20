@@ -37,11 +37,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kdt.team04.common.ApiResponse;
 import com.kdt.team04.common.aws.s3.S3Uploader;
 import com.kdt.team04.common.security.jwt.Jwt;
-import com.kdt.team04.domain.matches.match.model.entity.Match;
+import com.kdt.team04.domain.auth.dto.JwtToken;
 import com.kdt.team04.domain.matches.match.model.MatchType;
+import com.kdt.team04.domain.matches.match.model.entity.Match;
 import com.kdt.team04.domain.matches.review.dto.response.MatchReviewTotalResponse;
-import com.kdt.team04.domain.matches.review.model.entity.MatchReview;
 import com.kdt.team04.domain.matches.review.model.MatchReviewValue;
+import com.kdt.team04.domain.matches.review.model.entity.MatchReview;
 import com.kdt.team04.domain.security.WithMockJwtAuthentication;
 import com.kdt.team04.domain.teams.team.dto.response.TeamSimpleResponse;
 import com.kdt.team04.domain.teams.team.model.entity.Team;
@@ -272,13 +273,12 @@ class UserControllerIntegrationTest {
 	}
 
 	Cookie getAccessTokenCookie(User user) {
-		Jwt.Claims claims = Jwt.Claims.builder()
-			.userId(user.getId())
-			.roles(new String[] {String.valueOf(Role.USER)})
-			.username(user.getUsername())
-			.build();
-		String accessToken = jwt.generateAccessToken(claims);
+		Jwt.Claims claims = Jwt.Claims.builder(
+			user.getId(),
+			user.getUsername(),
+			new String[] {String.valueOf(Role.USER)}).build();
+		JwtToken accessToken = jwt.generateAccessToken(claims);
 
-		return new Cookie(jwt.accessTokenProperties().header(), accessToken);
+		return new Cookie(accessToken.header(), accessToken.token());
 	}
 }

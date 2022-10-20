@@ -126,18 +126,61 @@ public class Jwt {
 			if (!roles.isNull()) {
 				this.roles = roles.asArray(String.class);
 			}
-			this.iat = decodedJWT.getIssuedAt();
-			this.exp = decodedJWT.getExpiresAt();
 		}
 
-		@Builder
-		Claims(Long userId, String username, String email, String[] roles, Date iat, Date exp) {
+		private Claims(Long userId, String username, String email, String[] roles) {
 			this.userId = userId;
 			this.username = username;
 			this.email = email;
 			this.roles = roles;
-			this.iat = iat;
-			this.exp = exp;
+		}
+
+		public static ClaimsBuilder builder(Long userId, String username, String[] roles) {
+			return new ClaimsBuilder(userId, username, roles);
+		}
+
+		public Long getUserId() {
+			return userId;
+		}
+
+		public String getUsername() {
+			return username;
+		}
+
+		public String getEmail() {
+			return email;
+		}
+
+		public String[] getRoles() {
+			return roles;
+		}
+
+
+		public static class ClaimsBuilder {
+			private final Long userId;
+			private final String username;
+			private String email;
+			private final String[] roles;
+
+
+			public ClaimsBuilder(Long userId, String username, String[] roles) {
+				checkArgument(userId != null, "userId must be provided");
+				checkArgument(isNotBlank(username), "username must be provided");
+				checkArgument(roles != null, "username must be provided");
+				this.userId = userId;
+				this.username = username;
+				this.roles= roles;
+			}
+
+			public ClaimsBuilder email(String email) {
+				this.email = email;
+
+				return this;
+			}
+
+			public Claims build() {
+				return new Claims(this.userId, this.username, this.email, this.roles);
+			}
 		}
 	}
 }
