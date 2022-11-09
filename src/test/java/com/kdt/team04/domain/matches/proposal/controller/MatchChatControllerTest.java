@@ -1,3 +1,4 @@
+/*
 package com.kdt.team04.domain.matches.proposal.controller;
 
 import static org.mockito.BDDMockito.given;
@@ -274,4 +275,4 @@ class MatchChatControllerTest {
 			.andExpect(content().string(response));
 	}
 
-}
+}*/
