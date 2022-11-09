@@ -97,12 +97,6 @@ public class MatchProposalGiverService {
 			.orElseThrow(() -> new EntityNotFoundException(ErrorCode.PROPOSAL_NOT_FOUND,
 				MessageFormat.format("matchProposalId = {0}", id)));
 
-		if (matchProposal.getStatus() != MatchProposalStatus.APPROVED) {
-			throw new BusinessException(ErrorCode.PROPOSAL_NOT_APPROVED,
-				MessageFormat.format("proposerId = {0}, status = {1}", matchProposal.getId(),
-					matchProposal.getStatus()));
-		}
-
 		matchProposal.updateStatus(MatchProposalStatus.FIXED);
 
 		User user = matchProposal.getUser();

@@ -1,5 +1,8 @@
 package com.kdt.team04.domain.matches.proposal.entity;
 
+import static com.kdt.team04.domain.matches.proposal.entity.MatchProposalStatus.APPROVED;
+import static com.kdt.team04.domain.matches.proposal.entity.MatchProposalStatus.FIXED;
+import static com.kdt.team04.domain.matches.proposal.entity.MatchProposalStatus.REFUSE;
 import static com.kdt.team04.domain.matches.proposal.entity.MatchProposalStatus.WAITING;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 
@@ -64,7 +67,9 @@ public class MatchProposal extends BaseEntity {
 	}
 
 	public void updateStatus(MatchProposalStatus status) {
-		if(!this.status.isWaiting() || status.isFixed()) {
+		if (!this.status.isApproved() && status == FIXED
+			|| !this.status.isWaiting() && status == APPROVED
+			|| !this.status.isWaiting() && status == REFUSE) {
 			throw new BusinessException(ErrorCode.PROPOSAL_INVALID_REACT,
 				MessageFormat.format("proposal {1} status can't be {2} from {3}", this.id, status, this.status));
 		}
