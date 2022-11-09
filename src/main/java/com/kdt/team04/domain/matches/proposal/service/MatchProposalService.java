@@ -1,7 +1,8 @@
 package com.kdt.team04.domain.matches.proposal.service;
 
+import static java.text.MessageFormat.format;
+
 import java.math.BigInteger;
-import java.text.MessageFormat;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.kdt.team04.common.exception.BusinessException;
 import com.kdt.team04.common.exception.ErrorCode;
 import com.kdt.team04.domain.matches.match.dto.MatchConverter;
-import com.kdt.team04.domain.matches.match.dto.response.MatchAuthorResponse;
 import com.kdt.team04.domain.matches.match.dto.response.MatchResponse;
 import com.kdt.team04.domain.matches.match.model.MatchType;
 import com.kdt.team04.domain.matches.match.model.entity.Match;
@@ -87,7 +87,7 @@ public class MatchProposalService {
 		}
 
 		if (Objects.equals(matchResponse.author().id(), proposerId)) {
-			throw new BusinessException(ErrorCode.PROPOSAL_INVALID_CREATE_REQUEST, MessageFormat.format(
+			throw new BusinessException(ErrorCode.PROPOSAL_INVALID_CREATE_REQUEST, format(
 				"proposalId = {0}, authorId = {1}",
 				proposerId, matchResponse.author().id()));
 		}
@@ -96,7 +96,7 @@ public class MatchProposalService {
 
 		if (existsProposal) {
 			throw new BusinessException(ErrorCode.PROPOSAL_ALREADY_REQUESTED,
-				MessageFormat.format("Already proposal requested, matchId = {0}, proposerId = {1}", matchId,
+				format("Already proposal requested, matchId = {0}, proposerId = {1}", matchId,
 					proposerId));
 		}
 
@@ -162,7 +162,7 @@ public class MatchProposalService {
 		Location proposerLocation = proposer.userSettings().getLocation();
 		if (distance > 40) {
 			throw new BusinessException(ErrorCode.PROPOSAL_TOO_FAR_TO_REQUEST,
-				MessageFormat.format(
+				format(
 					"User is too far from Match, User ID, Location = ({0}, {1}), match ID, Location = ({2}, {3})",
 					proposer.id(),
 					proposerLocation,
@@ -174,25 +174,20 @@ public class MatchProposalService {
 	@Transactional
 	public MatchProposalStatus approveOrRefuse(Long authorId, Long matchId, Long id, MatchProposalStatus status) {
 		MatchResponse match = matchGiver.findById(matchId);
+		if (match.status().isEnded()) {
+			throw new BusinessException(ErrorCode.PROPOSAL_INVALID_REACT,
+				format("matchId = {0}, proposalId = {1}, proposalStatus = {2}, matchStatus = {3}",
+					match.id(), id, status, match.status()));
+		}
 
 		if (!Objects.equals(match.author().id(), authorId)) {
 			throw new BusinessException(ErrorCode.MATCH_ACCESS_DENIED,
-				MessageFormat.format("userId = {0}, matchId = {1}", authorId, matchId));
+				format("userId = {0}, matchId = {1}", authorId, matchId));
 		}
 
 		MatchProposal proposal = proposalRepository.findById(id)
 			.orElseThrow(() -> new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND,
-				MessageFormat.format("proposalId = {0}", id)));
-
-		if (match.status().isEnded() // 경기 종료 일때 변경 안됨
-			|| !proposal.getStatus().isWaiting() // 신청 상태가 대기상태가 아니면 변경 안됨!
-			|| (proposal.getStatus().isWaiting() && status.isFixed()) // 대기 → Fixed로도 변경 안되도록 추가
-			// 결과적으로, 경기 종료만 안됬으면 Waiting 일때 → Approved, Refuse 변경만 허용
-		) {
-			throw new BusinessException(ErrorCode.PROPOSAL_INVALID_REACT,
-				MessageFormat.format("matchId = {0}, proposalId = {1}, proposalStatus = {2}, matchStatus = {3}",
-					match.id(), id, status, match.status()));
-		}
+				format("proposalId = {0}", id)));
 
 		proposal.updateStatus(status);
 
@@ -203,14 +198,14 @@ public class MatchProposalService {
 		MatchResponse matchResponse = matchGiver.findById(matchId);
 		if (!Objects.equals(matchResponse.author().id(), authorId)) {
 			throw new BusinessException(ErrorCode.MATCH_ACCESS_DENIED,
-				MessageFormat.format("Don't have permission to access match with matchId={0}, authorId={1}, userId={2}",
+				format("Don't have permission to access match with matchId={0}, authorId={1}, userId={2}",
 					matchId, matchResponse.author().id(), authorId));
 		}
 
 		List<MatchProposal> matchProposals = proposalRepository.findAllByMatchId(matchId);
 		if (matchProposals.isEmpty()) {
 			throw new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND,
-				MessageFormat.format("Match proposal not found with matchId={0}, authorId={1}", matchId, authorId));
+				format("Match proposal not found with matchId={0}, authorId={1}", matchId, authorId));
 		}
 
 		List<Long> matchProposalIds = matchProposals.stream()
@@ -288,13 +283,13 @@ public class MatchProposalService {
 	public ProposalChatResponse findById(Long id, Long userId) {
 		MatchProposal proposal = proposalRepository.findProposalWithMatchById(id)
 			.orElseThrow(() -> new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND,
-				MessageFormat.format("proposalId = {0}", id)));
+				format("proposalId = {0}", id)));
 
 		if (proposal.getUser().getId() != userId
 			&& proposal.getMatch().getUser().getId() != userId
 		) {
 			throw new BusinessException(ErrorCode.PROPOSAL_ACCESS_DENIED,
-				MessageFormat.format("proposalId = {0}, userId = {1}", id, userId));
+				format("proposalId = {0}, userId = {1}", id, userId));
 		}
 
 		return ProposalChatResponse.builder()

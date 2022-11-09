@@ -3,6 +3,8 @@ package com.kdt.team04.domain.matches.proposal.entity;
 import static com.kdt.team04.domain.matches.proposal.entity.MatchProposalStatus.WAITING;
 import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 
+import java.text.MessageFormat;
+
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -16,6 +18,8 @@ import javax.persistence.ManyToOne;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
+import com.kdt.team04.common.exception.BusinessException;
+import com.kdt.team04.common.exception.ErrorCode;
 import com.kdt.team04.domain.BaseEntity;
 import com.kdt.team04.domain.matches.match.model.entity.Match;
 import com.kdt.team04.domain.teams.team.model.entity.Team;
@@ -59,8 +63,12 @@ public class MatchProposal extends BaseEntity {
 		this.status = defaultIfNull(status, WAITING);
 	}
 
-	//== 비지니스 로직 ==//
 	public void updateStatus(MatchProposalStatus status) {
+		if(!this.status.isWaiting() || status.isFixed()) {
+			throw new BusinessException(ErrorCode.PROPOSAL_INVALID_REACT,
+				MessageFormat.format("proposal {1} status can't be {2} from {3}", this.id, status, this.status));
+		}
+
 		this.status = status;
 	}
 
