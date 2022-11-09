@@ -104,6 +104,8 @@ dependencies {
 
 	//REDIS
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 }
 
 dependencyManagement {
@@ -132,12 +134,9 @@ querydsl {
 sourceSets {
 	main.java.srcDir querydslDir
 }
-
-// 여기부터는 Gradle 5.0 이후로 추가 작성
 compileQuerydsl{
 	options.annotationProcessorPath = configurations.querydsl
 }
-
 configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
