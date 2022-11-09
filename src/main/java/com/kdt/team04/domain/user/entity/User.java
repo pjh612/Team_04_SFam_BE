@@ -110,11 +110,12 @@ public class User extends BaseEntity {
 		return userSettings;
 	}
 
-	public void updateSettings(Double latitude, Double longitude, Integer searchDistance) {
+	public void updateSettings(Double latitude, Double longitude, String localName, Integer searchDistance) {
 		checkArgument(latitude != null, "latitude must be provided");
 		checkArgument(longitude != null, "longitude must be provided");
+		checkArgument(localName != null, "localName must be provided");
 		checkArgument(searchDistance != null, "search distance must be provided");
-		this.userSettings = new UserSettings(latitude, longitude, searchDistance);
+		this.userSettings = new UserSettings(latitude, longitude, localName, searchDistance);
 	}
 
 	public User update(String nickname, String email, String profileImageUrl) {

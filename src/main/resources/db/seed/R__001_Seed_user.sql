@@ -1,7 +1,7 @@
 INSERT IGNORE INTO users(id, username, password, nickname) VALUES (1, 'eli221', '$2a$12$e/n5T8uw2kqCx15f7zCeruPcoRlAJJr1pLVubCoU45HeMPeOpeaZq', 'Elizabath');
 INSERT IGNORE INTO users(id, username, password, nickname) VALUES (2, 'crong88', '$2a$12$e/n5T8uw2kqCx15f7zCeruPcoRlAJJr1pLVubCoU45HeMPeOpeaZq', 'Crong');
 INSERT IGNORE INTO users(id, username, password, nickname) VALUES (3, 'hyeb22', '$2a$12$e/n5T8uw2kqCx15f7zCeruPcoRlAJJr1pLVubCoU45HeMPeOpeaZq', 'hyeb');
-INSERT IGNORE INTO users(id, username, password, nickname) VALUES (4, 'pjh612', '$2a$12$e/n5T8uw2kqCx15f7zCeruPcoRlAJJr1pLVubCoU45HeMPeOpeaZq', 'Null');
+INSERT IGNORE INTO users(id, username, password, nickname,sfam.users.latitude, sfam.users.longitude) VALUES (4, 'pjh612', '$2a$12$e/n5T8uw2kqCx15f7zCeruPcoRlAJJr1pLVubCoU45HeMPeOpeaZq', 'Null', 35.2459168, 129.0862221);
 INSERT IGNORE INTO users(id, username, password, nickname) VALUES (5, 'midasq', '$2a$12$e/n5T8uw2kqCx15f7zCeruPcoRlAJJr1pLVubCoU45HeMPeOpeaZq', 'mark');
 INSERT IGNORE INTO users(id, username, password, nickname) VALUES (6, 'jkb221', '$2a$12$e/n5T8uw2kqCx15f7zCeruPcoRlAJJr1pLVubCoU45HeMPeOpeaZq', 'Lawrence');
 INSERT IGNORE INTO users(id, username, password, nickname) VALUES (7, 'papa22', '$2a$12$e/n5T8uw2kqCx15f7zCeruPcoRlAJJr1pLVubCoU45HeMPeOpeaZq', 'papa');

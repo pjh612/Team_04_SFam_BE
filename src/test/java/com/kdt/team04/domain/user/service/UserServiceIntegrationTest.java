@@ -1,6 +1,9 @@
 package com.kdt.team04.domain.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
+
+import java.util.List;
 
 import javax.persistence.EntityManager;
 
@@ -22,6 +25,8 @@ import com.kdt.team04.domain.user.dto.response.UpdateUserSettingsResponse;
 import com.kdt.team04.domain.user.entity.Location;
 import com.kdt.team04.domain.user.entity.User;
 import com.kdt.team04.domain.user.repository.UserRepository;
+import com.kdt.team04.feign.kakao.dto.CoordToAddressResponse;
+import com.kdt.team04.feign.kakao.service.KakaoApiService;
 
 @SpringBootTest
 @Transactional
@@ -44,6 +49,9 @@ class UserServiceIntegrationTest {
 
 	@MockBean
 	AmazonS3 amazonS3;
+
+	@MockBean
+	KakaoApiService kakaoApiService;
 
 	@Test
 	@DisplayName("새로운 유저는 위치정보가 처음엔 null이다.")
@@ -69,6 +77,12 @@ class UserServiceIntegrationTest {
 		Location location = new Location(1.2, 2.2);
 		Integer searchDistance = 10;
 		UpdateUserSettingsRequest request = new UpdateUserSettingsRequest(1.2, 2.2, 10);
+
+		given(kakaoApiService.coordToAddressResponse(request.longitude(), request.latitude())).willReturn(
+			new CoordToAddressResponse(null,
+				List.of(new CoordToAddressResponse.Documents[] {new CoordToAddressResponse.Documents(null,
+					new CoordToAddressResponse.Address(null, null, null, "테스트동", null, null, null, null))})));
+
 		//when
 		UpdateUserSettingsResponse response = userService.updateSettings(user.getId(), request);
 		User foundUser = entityManager.find(User.class, user.getId());

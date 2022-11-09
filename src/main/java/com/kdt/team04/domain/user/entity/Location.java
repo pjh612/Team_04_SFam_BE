@@ -13,12 +13,20 @@ public class Location {
 
 	private Double latitude;
 	private Double longitude;
+	private String localName;
 
-	protected Location() {}
+	protected Location() {
+	}
 
 	public Location(Double latitude, Double longitude) {
 		this.latitude = latitude;
 		this.longitude = longitude;
+	}
+
+	public Location(Double latitude, Double longitude, String localName) {
+		this.latitude = latitude;
+		this.longitude = longitude;
+		this.localName = localName;
 	}
 
 	public Double getLatitude() {
@@ -27,6 +35,10 @@ public class Location {
 
 	public Double getLongitude() {
 		return this.longitude;
+	}
+
+	public String getLocalName() {
+		return localName;
 	}
 
 	@Override

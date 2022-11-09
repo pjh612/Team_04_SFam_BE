@@ -2,7 +2,6 @@ package com.kdt.team04.domain.matches.match.repository;
 
 import static com.kdt.team04.domain.matches.match.model.entity.QMatch.match;
 import static com.kdt.team04.domain.user.entity.QUser.user;
-import static com.querydsl.core.types.dsl.Expressions.asDateTime;
 import static com.querydsl.core.types.dsl.Expressions.asNumber;
 import static com.querydsl.core.types.dsl.MathExpressions.acos;
 import static com.querydsl.core.types.dsl.MathExpressions.cos;
@@ -68,10 +67,9 @@ public class CustomMatchRepositoryImpl implements CustomMatchRepository {
 		BooleanExpression cursorCondition = null;
 
 		if (createdAt != null && id != null) {
-			cursorCondition = match.createdAt.lt(asDateTime(createdAt))
-				.or(asDateTime(createdAt).eq(match.createdAt).and(asNumber(match.id).lt(id)));
+			cursorCondition = match.createdAt.lt(createdAt)
+				.or(match.createdAt.eq(createdAt).and(match.id.lt(id)));
 		}
-
 		List<QueryMatchListResponse> matches = jpaQueryFactory.select(
 				Projections.constructor(QueryMatchListResponse.class,
 					match.id,
@@ -83,6 +81,7 @@ public class CustomMatchRepositoryImpl implements CustomMatchRepository {
 					match.user.nickname,
 					match.location.latitude,
 					match.location.longitude,
+					match.location.localName,
 					distanceExpression.as("distance"),
 					match.matchDate,
 					match.createdAt

@@ -138,14 +138,7 @@ public class MatchService {
 
 		List<MatchListViewResponse> matchListViewResponses = queryMatchListResponse.values()
 			.stream()
-			.map((match) -> new MatchListViewResponse(match,
-					kakaoApiService.coordToAddressResponse(match.longitude(), match.latitude())
-						.documents()
-						.get(0)
-						.address()
-						.region3DepthName()
-				)
-			)
+			.map(MatchListViewResponse::new)
 			.collect(Collectors.toList());
 		return new PageDto.CursorResponse<>(
 			matchListViewResponses,
