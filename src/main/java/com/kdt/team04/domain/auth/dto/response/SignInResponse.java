@@ -35,10 +35,10 @@ public record SignInResponse(
 	@Schema(description = "회원 거리 설정값")
 	Integer searchDistance,
 
-	@JsonIgnore
+
 	JwtToken accessToken,
 
-	@JsonIgnore
+
 	JwtToken refreshToken,
 
 	@JsonIgnore

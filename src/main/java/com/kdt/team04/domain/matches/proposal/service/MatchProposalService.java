@@ -190,6 +190,7 @@ public class MatchProposalService {
 				format("proposalId = {0}", id)));
 
 		proposal.updateStatus(status);
+		matchChatService.createChatRoom(proposal.getId().toString());
 
 		return proposal.getStatus();
 	}

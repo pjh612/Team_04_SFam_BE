@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConstructorBinding;
 @ConfigurationProperties(prefix = "spring.redis")
 public record RedisConfigProperties(
 	String host,
-	int port
+	int port,
+	String password
 ) {
 }

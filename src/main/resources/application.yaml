@@ -16,6 +16,7 @@ spring:
   redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:1234}
 cors:
   allowed:
     api: /**
@@ -30,6 +31,7 @@ security:
         - /api/users/nickname/duplication
         - /api/users/username/duplication
         - /health
+
       POST:
         - /api/users/signin
         - /api/users/signup

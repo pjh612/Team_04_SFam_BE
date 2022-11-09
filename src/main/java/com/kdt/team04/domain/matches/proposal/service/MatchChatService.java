@@ -8,16 +8,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.annotation.PostConstruct;
+
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kdt.team04.common.exception.BusinessException;
 import com.kdt.team04.common.exception.ErrorCode;
-import com.kdt.team04.domain.matches.match.model.MatchStatus;
+import com.kdt.team04.domain.matches.proposal.dto.ChatMessage;
 import com.kdt.team04.domain.matches.proposal.dto.MatchChatConverter;
 import com.kdt.team04.domain.matches.proposal.dto.QueryMatchChatPartitionByProposalIdResponse;
 import com.kdt.team04.domain.matches.proposal.dto.QueryMatchProposalSimpleResponse;
-import com.kdt.team04.domain.matches.proposal.dto.response.LastChatResponse;
 import com.kdt.team04.domain.matches.proposal.dto.response.ChatItemResponse;
 import com.kdt.team04.domain.matches.proposal.dto.response.MatchChatResponse;
 import com.kdt.team04.domain.matches.proposal.dto.response.MatchChatViewMatchResponse;
@@ -28,25 +32,28 @@ import com.kdt.team04.domain.matches.proposal.entity.MatchProposalStatus;
 import com.kdt.team04.domain.matches.proposal.repository.MatchChatRepository;
 import com.kdt.team04.domain.user.dto.response.ChatWriterProfileResponse;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class MatchChatService {
 
 	private final MatchChatRepository matchChatRepository;
 	private final MatchProposalGiverService matchProposalGiver;
 	private final MatchChatConverter matchChatConverter;
+	private final RedisTemplate<String, Object> redisTemplate;
+	private final ChannelTopic channelTopic;
+	private HashOperations<String, String, Long> opsHashChatRoom;
 
-	public MatchChatService(
-		MatchChatRepository matchChatRepository,
-		MatchProposalGiverService matchProposalGiver,
-		MatchChatConverter matchChatConverter) {
-		this.matchChatRepository = matchChatRepository;
-		this.matchProposalGiver = matchProposalGiver;
-		this.matchChatConverter = matchChatConverter;
+	@PostConstruct
+	private void init() {
+		opsHashChatRoom = redisTemplate.opsForHash();
 	}
 
 	@Transactional
-	public void chat(Long proposalId, Long writerId, Long targetId, String content, LocalDateTime chattedAt) {
+	public void chat(Long proposalId, Long writerId, Long targetId, String content,
+		LocalDateTime chattedAt) {
 		QueryMatchProposalSimpleResponse matchProposalDto = matchProposalGiver.findSimpleProposalById(proposalId);
 
 		if (matchProposalDto.getStatus() != MatchProposalStatus.APPROVED
@@ -62,6 +69,9 @@ public class MatchChatService {
 		MatchChat matchChat = matchChatConverter.toMatchChat(matchProposalDto.getId(), writerId, targetId, content,
 			chattedAt);
 		matchChatRepository.save(matchChat);
+
+		ChatMessage request = new ChatMessage(proposalId, writerId, content);
+		redisTemplate.convertAndSend(channelTopic.getTopic(), request);
 	}
 
 	private void checkCorrectChatPartner(Long proposerId, Long matchAuthorId, Long writerId, Long targetId) {
@@ -99,20 +109,16 @@ public class MatchChatService {
 
 	//특정 매치의 나의 채팅 기록
 	public MatchChatResponse findChatsByProposalId(Long proposalId, Long userId) {
-		MatchChatViewMatchResponse match
-			= matchProposalGiver.findChatMatchByProposalId(proposalId, userId);
+		MatchChatViewMatchResponse match = matchProposalGiver.findChatMatchByProposalId(proposalId, userId);
 
 		List<MatchChat> matchChats = matchChatRepository.findAllByProposalId(proposalId);
 		List<ChatItemResponse> chats = matchChats.stream()
-			.map(chat -> {
-				ChatWriterProfileResponse writer = new ChatWriterProfileResponse(chat.getUser().getId());
-
-				return new ChatItemResponse(
+			.map(chat -> new ChatItemResponse(
 					chat.getContent(),
 					chat.getChattedAt(),
-					writer
-				);
-			})
+					new ChatWriterProfileResponse(chat.getUser().getId())
+				)
+			)
 			.toList();
 
 		return new MatchChatResponse(match, chats);
@@ -123,8 +129,16 @@ public class MatchChatService {
 		List<MatchProposal> proposals = proposalResponses.stream()
 			.map((proposal -> MatchProposal.builder()
 				.id(proposal.id())
-				.build())).toList();
+				.build()))
+			.toList();
 
 		matchChatRepository.deleteAllByProposalIn(proposals);
 	}
+
+	public String createChatRoom(String name) {
+		opsHashChatRoom.put("CHAT_ROOMS", name, Long.parseLong(name));
+
+		return name;
+	}
+
 }
