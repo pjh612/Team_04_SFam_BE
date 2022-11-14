@@ -20,7 +20,7 @@ public class RedisSubscriber{
 		try {
 			ChatMessage request = objectMapper.readValue(publishMessage, ChatMessage.class);
 
-			messagingTemplate.convertAndSend("/sub/chat/room/" + request.roomId(), request);
+			messagingTemplate.convertAndSend("/api/sub/chat/room/" + request.roomId(), request);
 
 		} catch (Exception e) {
 			log.info(e.getMessage(),e);
